@@ -299,6 +299,11 @@ int rx_streamer::start(const int flags,
 		const long long timeNs,
 		const size_t numElems)
 {
+	// It is not guaranteed that the caller has correctly stopped the stream, leading to SegFaults
+	if (buf) {
+		stop(0, 0);
+	}
+
 	std::unique_lock<std::mutex> lock(mutex);
 
 	items_in_buffer = 0;

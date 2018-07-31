@@ -1,3 +1,4 @@
+#include <string.h>
 #include "SoapyPlutoSDR.hpp"
 #include <SoapySDR/Registry.hpp>
 
@@ -43,15 +44,19 @@ static std::vector<SoapySDR::Kwargs> find_PlutoSDR(const SoapySDR::Kwargs &args)
 
 	}else{
 		for (int i = 0; i < ret; i++) {
-			ctx = iio_create_context_from_uri(iio_context_info_get_uri(info[i]));
-			if (ctx != nullptr) {
-				options["uri"] = std::string(iio_context_info_get_uri(info[i]));
-				sprintf(label_str, "%s #%d %s", options["device"].c_str(), i, options["uri"].c_str());
-				results.push_back(options);
-				if (ctx != nullptr)iio_context_destroy(ctx);
+			// This if clause has been added to prevent interfacing with further non-Pluto devices.
+			// For example, we had problems due to an internal accelerometer which provides a libiio interface.
+			// The string ADALM-PLUTO was chosen due to its use as model identifier printed on the hardware.
+			if (strstr(iio_context_info_get_description(info[i]), "ADALM-PLUTO")) {
+				ctx = iio_create_context_from_uri(iio_context_info_get_uri(info[i]));
+				if (ctx != nullptr) {
+					options["uri"] = std::string(iio_context_info_get_uri(info[i]));
+					sprintf(label_str, "%s #%d %s", options["device"].c_str(), i, options["uri"].c_str());
+					results.push_back(options);
+					if (ctx != nullptr)iio_context_destroy(ctx);
+				}
 			}
-
-	}
+		}
 	}
 
 	return results;

@@ -3,28 +3,32 @@
 #include <ad9361.h>
 #endif
 
+static iio_context *ctx = nullptr; 
 SoapyPlutoSDR::SoapyPlutoSDR( const SoapySDR::Kwargs &args ):
-	ctx(nullptr), dev(nullptr), rx_dev(nullptr),tx_dev(nullptr), decimation(false), interpolation(false), rx_stream(nullptr)
+	dev(nullptr), rx_dev(nullptr),tx_dev(nullptr), decimation(false), interpolation(false), rx_stream(nullptr)
 {
 
 	if (args.count("label") != 0)
 		SoapySDR_logf( SOAPY_SDR_INFO, "Opening %s...", args.at("label").c_str());
 
+	if(ctx == nullptr)
+	{
+	  if(args.count("uri") != 0) {
 
-	if(args.count("uri") != 0) {
+		  ctx = iio_create_context_from_uri(args.at("uri").c_str());
 
-		ctx = iio_create_context_from_uri(args.at("uri").c_str());
-
-	}else if(args.count("hostname")!=0){
-		ctx = iio_create_network_context(args.at("hostname").c_str());
-	}else{
-		ctx = iio_create_default_context();
+	  }else if(args.count("hostname")!=0){
+		  ctx = iio_create_network_context(args.at("hostname").c_str());
+	  }else{
+		  ctx = iio_create_default_context();
+	  }
 	}
 
 	if (ctx == nullptr) {
 		SoapySDR_logf(SOAPY_SDR_ERROR, "not device found.");
 		throw std::runtime_error("not device found");
 	}
+
 	dev = iio_context_find_device(ctx, "ad9361-phy");
 	rx_dev = iio_context_find_device(ctx, "cf-ad9361-lpc");
 	tx_dev = iio_context_find_device(ctx, "cf-ad9361-dds-core-lpc");
@@ -47,7 +51,11 @@ SoapyPlutoSDR::~SoapyPlutoSDR(void){
 		iio_channel_attr_write_longlong(iio_device_find_channel(tx_dev, "voltage0", true),"sampling_frequency", samplerate);
 	}
 
-	if(ctx)iio_context_destroy(ctx);
+	if(ctx)
+	{
+		iio_context_destroy(ctx);
+		ctx = nullptr;
+	}
 
 
 }
@@ -231,7 +239,7 @@ void SoapyPlutoSDR::setGain( const int direction, const size_t channel, const do
 
 	if(direction==SOAPY_SDR_TX){
 
-		gain = 89 - gain;
+		gain = gain - 89;
 		iio_channel_attr_write_longlong(iio_device_find_channel(dev, "voltage0", true),"hardwaregain", gain);
 
 	}
@@ -270,7 +278,7 @@ double SoapyPlutoSDR::getGain( const int direction, const size_t channel, const 
 SoapySDR::Range SoapyPlutoSDR::getGainRange( const int direction, const size_t channel, const std::string &name ) const
 {
 	if(direction==SOAPY_SDR_RX)
-		(SoapySDR::Range(0, 76));
+		return(SoapySDR::Range(0, 73));
 	return(SoapySDR::Range(0,89));
 
 }
